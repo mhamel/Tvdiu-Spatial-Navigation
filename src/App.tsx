@@ -1,6 +1,6 @@
 /**
  * Since this file is for development purposes only, some of the dependencies are in devDependencies
- * Disabling ESLint rules for these dependencies since we know it is only for development purposes
+ * Disabling ESLint rules for these dependencies since we know it is onl y for development purposes
  */
 
 import React, { useCallback, useEffect, useState, useRef } from 'react';
