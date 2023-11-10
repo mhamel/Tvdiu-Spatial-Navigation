@@ -1,6 +1,6 @@
 /**
  * Since this file is for development purposes only, some of the dependencies are in devDependencies
- * Disabling ESLint rules for these dependencies since we know it is onl y for development purposes
+ * Disabling ESLint rules for these dependencies since we know it is fffonl y for development purposes
  */
 
 import React, { useCallback, useEffect, useState, useRef } from 'react';
@@ -15,8 +15,11 @@ import {
   FocusContext,
   FocusDetails,
   FocusableComponentLayout,
-  KeyPressDetails
+  KeyPressDetails,
+  navigateByDirection,
+  setFocus
 } from './index';
+import { useInView } from 'framer-motion';
 
 const logo = require('../logo.png').default;
 
@@ -205,10 +208,19 @@ const AssetTitle = styled.div`
   font-weight: 400;
 `;
 
+interface MyRefType {
+  current: HTMLElement | null;
+}
+
 interface AssetProps {
   title: string;
   color: string;
-  onEnterPress: (props: object, details: KeyPressDetails) => void;
+  id: string;
+  onEnterPress: (props: object, details: KeyPressDetails) => void;  
+  onInViewChange: (id:string, inView: boolean) => void;
+  onFocusedOutOfView: (x:number) => void;
+  onRight:() => void;
+  forwardedRefContainer: React.RefObject<HTMLElement>;
   onFocus: (
     layout: FocusableComponentLayout,
     props: object,
@@ -216,16 +228,35 @@ interface AssetProps {
   ) => void;
 }
 
-function Asset({ title, color, onEnterPress, onFocus }: AssetProps) {
+function Asset({ id, title, color, onEnterPress, onFocus, onInViewChange, onFocusedOutOfView, forwardedRefContainer, onRight }: AssetProps) {
   const { ref, focused } = useFocusable({
     onEnterPress,
     onFocus,
+    onArrowPress: (direction:string) => { 
+      if(direction === "right"){
+        onRight();
+      }
+      return false;
+    },
     extraProps: {
       title,
       color
     }
   });
 
+  const isInView = useInView(ref, { root:forwardedRefContainer});
+  //const isInView = useInView(ref, { margin: "0px 100px -50px 0px", amount:1});
+//&& focused
+
+useEffect(() => {
+  onInViewChange(id, isInView);
+  if(isInView === false && focused){
+    onFocusedOutOfView(ref.current.x);
+  }
+}, [isInView])
+
+ 
+  //console.log("isInView ->" + isInView + " -> " + title);
   return (
     <AssetWrapper ref={ref}>
       <AssetBox color={color} focused={focused} />
@@ -283,13 +314,42 @@ function ContentRow({
 
   const onAssetFocus = useCallback(
     ({ x }: { x: number }) => {
-      scrollingRef.current.scrollTo({
-        left: x,
-        behavior: 'smooth'
-      });
+      //scrollingRef.current.scrollTo({
+      //  left: x,
+      //  behavior: 'smooth'
+      //});
     },
     [scrollingRef]
   );
+
+
+  const onRight = useCallback(
+    () => {
+      scrollingRef.current.scrollTo({
+        left: scrollingRef.current.scrollLeft + 247,
+        behavior: 'smooth'
+      });
+      //console.log("navigateByDirection");
+      navigateByDirection("right", {});
+    },
+    [scrollingRef]
+  );
+
+  const onFocusedOutOfView = (x:number) => {
+    console.log("onFocusedOutOfView");
+
+    //select the neerest with same x
+
+
+    navigateByDirection("right", {});
+    //selectFirstVisibleSameXAsFocused();
+  };
+
+  const onInViewChange = (id:string, inView:boolean) => {
+    console.log("onInViewChange ->" + inView);
+    //navigateByDirection("right", {});
+    //selectFirstVisibleSameXAsFocused();
+  };
 
   return (
     <FocusContext.Provider value={focusKey}>
@@ -297,13 +357,18 @@ function ContentRow({
         <ContentRowTitle>{rowTitle}</ContentRowTitle>
         <ContentRowScrollingWrapper ref={scrollingRef}>
           <ContentRowScrollingContent>
-            {assets.map(({ title, color }) => (
+            {assets.map(({ title, color }, index) => (
               <Asset
+                id={"yo_" + index}
                 key={title}
                 title={title}
                 color={color}
                 onEnterPress={onAssetPress}
                 onFocus={onAssetFocus}
+                onInViewChange={onInViewChange}
+                onFocusedOutOfView={onFocusedOutOfView}
+                onRight={onRight}
+                forwardedRefContainer={scrollingRef}
               />
             ))}
           </ContentRowScrollingContent>
